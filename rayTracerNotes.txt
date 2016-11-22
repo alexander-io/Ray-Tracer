@@ -1,0 +1,74 @@
+RAY TRACER
+  works by rendering one pixel at a time
+  for each pixel the basic task is to find the object thatis seen at
+  that pixel's position in the image.
+
+  each pixel "looks" in a different direction
+  any object that is seen by by a pixel must intersect the viewing ray,
+  a line that emanates from the viewpoint in the direction that pixel is looking
+
+  A basic ray tracer has three parts :
+    ray generation, which computes the origin and direction of each pixel's viewing ray based on the camera geometry
+
+    ray intersection, which finds the closest object intersection the viewing ray
+
+    shading, which computes the pixel color based on the results of ray intersection
+
+  The structure of the basic ray tracing algorithm is :
+
+    for each pixel
+      compute viewing ray
+      find first object hit by ray and its surface normal n
+      set pixel color to value computed from hit point, light, and n
+    end for
+
+  In order to generate rays, we first need a mathematical representation of a ray.
+    a ray is just an origin point and a propagation direction :
+      a 3d parametric curve is ideal for this
+
+    the parametric line from the eye e to a point s on the image plane is given by :
+      var e = eye, or ray's origin
+      var s = point on image plane
+      var t = fractional distance
+      var p = point
+
+      p(t) = e + t(s - e)
+
+      "we advance from e along the vector (s-e)
+      a fractional distance t to find point p"
+
+      so given t, we can determine a point p
+
+      the term, (s - e), represents the ray's direction
+
+      given the above function, note :
+
+        p(0) = e
+        p(1) = s
+        and more generally :
+          if (0 < t1 < t2){
+           then p(t1) is closer to the eye than p(t2)
+          }
+
+          if (t < 0){
+            then p(t) is "behind the eye"
+          }
+
+  To compute the viewing ray, we need to know e and s.
+
+  We should define the image dimensions with four numbers,
+  the four sides of the image :
+    l
+    r
+    b
+    t
+
+  Each pixel at position (i,j) in the raster image has the position :
+    (4.1)
+    u = l+(r - l)(i + 0.5)/nx
+    v = b+(t - b)(j + 0.5)/ny
+
+  Procedure for Generating Orthographic Viewing Ray :
+    compute u and v using (4.1)
+    ray.direction = w * (-1);
+    ray.origin = e + uu + vv
