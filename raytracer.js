@@ -21,10 +21,10 @@ function init() {
   imageBuffer = context.createImageData(canvas.width, canvas.height); //buffer for pixels
 
 
-  // loadSceneFile("assets/TriangleShadingTest.json");
+  loadSceneFile("assets/TriangleShadingTest.json");
   // loadSceneFile("assets/TriangleTest.json");
   // loadSceneFile("assets/SphereTest.json");
-  loadSceneFile("assets/SphereShadingTest1.json");
+  // loadSceneFile("assets/SphereShadingTest1.json");
 }
 
 //loads and "parses" the scene file at the given path
@@ -160,7 +160,7 @@ Camera.prototype.castRay  = function(x, y){
   // var myvar = ray.direction;
   // console.log(myvar);
   if (DEBUG) {
-    console.log('ray direction : ', ray.direction)
+    console.log('OUTER ray direction : ', ray.direction)
   }
   for (var i = 0; i < surfaces.length-1; i++) {
 
@@ -322,20 +322,20 @@ Sphere.prototype.intersects = function(ray){
 
     let normal = new THREE.Vector3().subVectors(ray.direction, this.center)
 
-    if (DEBUG){
-      console.log('normal : ', normal)
-      console.log('intersection point, so called : ', intersectionPoint)
-    }
+    // if (DEBUG){
+    //   console.log('normal : ', normal)
+    //   console.log('intersection point, so called : ', intersectionPoint)
+    // }
 
     let tuple = {
       normal : normal,
       ip : intersectionPoint
     }
 
-    if(DEBUG){
-      console.log('tuple normal : ', tuple.normal)
-      console.log('tuple intersectionPoint : ', tuple.ip)
-    }
+    // if(DEBUG){
+    //   console.log('tuple normal : ', tuple.normal)
+    //   console.log('tuple intersectionPoint : ', tuple.ip)
+    // }
 
     return tuple
 
@@ -421,19 +421,16 @@ Triangle.prototype.intersects = function(ray){
   let betabeta = betaDet / alphaDet;
   let gammagamma = gammaDet / alphaDet;
 
-
-
-
   if (betabeta > 0 && gammagamma > 0 && (betabeta + gammagamma) < 1) {
     // normal vector for a triangle is the cross product of two edges, normalized
 
     // // τ
     let tau = new THREE.Matrix3().set(
-      a.x - b.x, a.x - c.x, ray.origin.x,
-      a.y - b.y, a.y - c.y, ray.origin.y,
-      a.z - b.z, a.z - c.z, ray.origin.z
+      a.x - b.x, a.x - c.x, a.x - ray.origin.x,
+      a.y - b.y, a.y - c.y, a.y - ray.origin.y,
+      a.z - b.z, a.z - c.z, a.z - ray.origin.z
     )
-    let tauDet = tau.determinant()
+    let tauDet = tau.clone().determinant()
 
     let finalT = tauDet / alphaDet
 
@@ -444,17 +441,24 @@ Triangle.prototype.intersects = function(ray){
     }
 
     let intersectionPoint = ray.direction.clone().normalize().multiplyScalar(finalT)
-    if (DEBUG){
-      console.log('AFTER ray direction : ',ray.direction)
-    }
+    // if (DEBUG){
+    //
+    //   console.log('AFTER ray direction : ', ray.direction)
+    //   console.log('TESTING tau : ', tau)
+    //   console.log('TESTING tauDet : ', tauDet)
+    //   console.log('TESTING finalT variable: ', finalT)
+    //   // console.log('TESTING ray direction : ', ray.direction)
+    //   console.log('TESTING intersection point : ', intersectionPoint)
+    // }
+
     let tuple = {
       normal : normal,
       ip : intersectionPoint
     }
 
-    if (DEBUG){
-      console.log('triangle tuple : ', tuple)
-    }
+    // if (DEBUG){
+    //   console.log('triangle tuple : ', tuple)
+    // }
 
     return tuple
 
@@ -532,26 +536,24 @@ function trace(ray, surface, lights, tuple){
     // if (DEBUG) {
     //   console.log('first Id : ', Id)
     // }
+
+    /*
+    the vector l is computed by subtracting the intersection point of the ray and
+    the surface from the light source position
+    */
     let lima = new THREE.Vector3().subVectors(pointLightPosition, tuple.ip)
     // let lima = new THREE.Vector3().subVectors(pointLight.position, tuple.ip)
     // l.subVectors(pointLight.position, tuple.ip)
 
-
-
-
-    // if (DEBUG) {
-    //   // console.log('FIRST N : ', n)
-    //   console.log('point light position : ', pointLight.position)
-    //   console.log('tuple intersect point : ', tuple.ip)
-    //   console.log('FIRST L : ', lima)
-    // }
     var ll = lima
     let n = tuple.normal
 
-    Id = lima.clone().dot(n)*-1
-    // if (DEBUG) {
-    //   console.log('Id : ', Id)
-    // }
+    Id = lima.clone().normalize().dot(n.clone().normalize())*-1
+    if (DEBUG) {
+      console.log('TESTING Id : ', Id)
+      console.log('TESTING normal : ', n.clone().normalize())
+      console.log('TESTING tuple intersection point : ', tuple.ip)
+    }
 
     // calc reflection
     // R = reflection = 2*(tuple.normal dot l)*N - l
@@ -569,22 +571,6 @@ function trace(ray, surface, lights, tuple){
       Is = 0;
 
     }
-    // if (DEBUG) {
-    // //   console.log('N :', n)
-    // //   console.log('R : ', r)
-    // //   console.log('V : ', v)
-    // //   // console.log('L : ', l)
-    // //   console.log('Id : ', Id)
-    // //   console.log('RTMP : ', rtmp)
-    // // console.log(r.dot(v))
-    // console.log('ray direction : ', ray.direction)
-    // console.log('r : ', r)
-    // console.log('v : ', v)
-    // console.log('Ia : ', Ia)
-    // console.log('Id : ', Id)
-    // console.log('Is : ', Is)
-    // console.log('ks array : ', surface.mat.ks)
-    // }
 
   }
 
@@ -635,66 +621,9 @@ function trace(ray, surface, lights, tuple){
   //   console.log('tuple normal : ', tuple.normal)
   // }
 
-  // for (var i = 0; i < materials.length; i++) {
-
-    // let ka = materials[i].ka
-    // let kd = materials[i].kd
-    // let ks = materials[i].ks
-    // let kr = materials[i].kr
-
-
-  //   let shininess = materials[i].shininess
-  //
-  //   for (var j = 0; j < lights.length; j++) {
-  //     let lightSource = lights[j].source
-  //     let lightColor = lights[j].color
-  //
-  //
-  //
-  //     if (DEBUG){
-  //       // console.log(this.mat)
-  //       // console.log('surface : ', surface)
-  //       // console.log('materials : ', materials)
-  //       // console.log('materials at index 0 : ', materials[0])
-  //       console.log('ka : ', ka)
-  //       console.log('kd : ', kd)
-  //       console.log('ks : ', ks)
-  //       console.log(ray.direction)
-  //       // console.log('lights : ', lights)
-  //       // console.log('light source : ', lightSource)
-  //       // console.log('light color : ', lightColor)
-  //       // console.log('shininess : ')
-  //     }
-  //   }
-  // }
-
-  // console.log('scene data : \n\t scene.')
-
-  // let ka = materials.ka
-  // let kd = materials.kd
-  // let ks = materials.ks
-
-  // let ka = new THREE.Vector3(materials.ka[0], materials.ka[1], materials.ka[2])
-  // let kd = new THREE.Vector3(materials.kd[0], materials.kd[1], materials.kd[2])
-  // let ks = new THREE.Vector3(materials.ks[0], materials.ks[1], materials.ks[2])
-  // if (DEBUG){
-  //   // console.log('ka : ', ka '\nkd : ', kd '\nks : ', ks)
-  //   console.log('ka : ', ka)
-  //   console.log('kd : ', kd)
-  //   console.log('ks : ', ks)
-  // }
 
 
 
-
-  /*
-  the vector l is computed by subtracting the intersection point of the ray and
-  the surface from the light source position
-
-
-  make sure to normalize
-  */
-  // let l;
 
   return color
 }
@@ -707,15 +636,6 @@ function trace(ray, surface, lights, tuple){
  * @param {float[3]} color A length-3 array (or a vec3) representing the color. Color values should floating point values between 0 and 1
  */
 function setPixel(x, y, color){
-  // for (var i = 0; i < color.length; i++) {
-  //   color[i] = color[i]/100.0
-  //
-  // }
-  // if (DEBUG){
-  //   console.log('WTF COLOR R: ', color[0]*255)
-  //   console.log('WTF COLOR B: ', color[1]*255)
-  //   console.log('WTF COLOR G: ', color[2]*255)
-  // }
   var i = (y*imageBuffer.width + x)*4;
   imageBuffer.data[i] = (color[0]*255) | 0;
   imageBuffer.data[i+1] = (color[1]*255) | 0;
@@ -725,13 +645,6 @@ function setPixel(x, y, color){
   // imageBuffer.data[i+2] = (color[2]*255);
   imageBuffer.data[i+3] = 255; //(color[3]*255) | 0; //switch to include transparency
 }
-// function setPixelBlack(x, y, color){
-//   var i = (y*imageBuffer.width + x)*4;
-//   imageBuffer.data[i] = (color[0]*255) | 0;
-//   imageBuffer.data[i+1] = (color[1]*255) | 0;
-//   imageBuffer.data[i+2] = (color[2]*255) | 0;
-//   imageBuffer.data[i+3] = 255; //(color[3]*255) | 0; //switch to include transparency
-// }
 
 //converts degrees to radians
 function rad(degrees){
