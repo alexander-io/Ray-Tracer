@@ -20,8 +20,11 @@ function init() {
   context = canvas.getContext("2d");
   imageBuffer = context.createImageData(canvas.width, canvas.height); //buffer for pixels
 
-  loadSceneFile("assets/TriangleTest.json");
+
+  // loadSceneFile("assets/TriangleShadingTest.json");
+  // loadSceneFile("assets/TriangleTest.json");
   // loadSceneFile("assets/SphereTest.json");
+  loadSceneFile("assets/SphereShadingTest1.json");
 }
 
 //loads and "parses" the scene file at the given path
@@ -61,11 +64,13 @@ function loadSceneFile(filepath) {
 
   // loop through lights and set them up
   for (var i = 0; i < scene.lights.length; i++) {
-
+    // console.log('light : ', scene.lights[i])
     if (scene.lights[i].source === 'Ambient') {
+      console.log('loading ambient light...')
       ambientLight = scene.lights[i]
     } else if (scene.lights[i].source === 'Point') {
-      pointLight = scene.light[i]
+      console.log('loading point light...')
+      pointLight = scene.lights[i]
     } else if (scene.lights[i].source === 'Directional') {
       directionalLight = scene.lights[i]
     }
@@ -154,7 +159,9 @@ Camera.prototype.castRay  = function(x, y){
   // console.log("ray direction : " + ray.origin);
   // var myvar = ray.direction;
   // console.log(myvar);
-
+  if (DEBUG) {
+    console.log('ray direction : ', ray.direction)
+  }
   for (var i = 0; i < surfaces.length-1; i++) {
 
     // if (DEBUG) {
@@ -164,14 +171,18 @@ Camera.prototype.castRay  = function(x, y){
 
     let tuple = surfaces[i].intersects(ray)
     // let color = trace(ray, surfaces[i], scene.materials, scene.lights)
-
+    // let color = trace(ray, surfaces[i], scene.lights, tuple)
+    // //
+    // setPixel(x,y, color)
     if (tuple) {
       let color = trace(ray, surfaces[i], scene.lights, tuple)
       //
-      setPixelRed(x,y, color)
+      setPixel(x,y, color)
     } else {
+      // var color = 0;
+      // let color = trace(ray, surfaces[i], scene.lights, tuple)
       var color = 0;
-      setPixelBlack(x,y, color)
+      setPixel(x,y, color)
     }
     // console.log(typeof  surfaces[i])
     // console.log('shape : ', scene.surfaces[i].shape)
@@ -428,12 +439,14 @@ Triangle.prototype.intersects = function(ray){
 
     let normal = new THREE.Vector3().crossVectors(a, b)
 
-    // if (DEBUG){
-    //   console.log('traiangle normal : ', triangleNormal)
-    // }
+    if (DEBUG){
+      console.log('BEFORE ray direction : ', ray.direction)
+    }
 
-    let intersectionPoint = ray.direction.normalize().multiplyScalar(finalT)
-
+    let intersectionPoint = ray.direction.clone().normalize().multiplyScalar(finalT)
+    if (DEBUG){
+      console.log('AFTER ray direction : ',ray.direction)
+    }
     let tuple = {
       normal : normal,
       ip : intersectionPoint
@@ -500,19 +513,79 @@ function trace(ray, surface, lights, tuple){
 
   */
 
+  let pointLightPosition = new THREE.Vector3(pointLight.position[0], pointLight.position[1], pointLight.position[2])
+
 
   // color array to hold rgb values, index: 0, 1, 2 | R, G, B
   let color = []
 
   let Ia = ambientLight.color
-  let r =
+//  reflection vector
+  // let r =
   let v = new THREE.Vector3().subVectors(tuple.ip, ray.origin)
-  let Is = ()
+  // let Is = ()
+
+  let Id = 0;
+  let Is = 0;
 
   if(pointLight){
-    let l = new THREE.Vector3().subVectors(pointLight.position, tuple.ip)
+    // if (DEBUG) {
+    //   console.log('first Id : ', Id)
+    // }
+    let lima = new THREE.Vector3().subVectors(pointLightPosition, tuple.ip)
+    // let lima = new THREE.Vector3().subVectors(pointLight.position, tuple.ip)
+    // l.subVectors(pointLight.position, tuple.ip)
+
+
+
+
+    // if (DEBUG) {
+    //   // console.log('FIRST N : ', n)
+    //   console.log('point light position : ', pointLight.position)
+    //   console.log('tuple intersect point : ', tuple.ip)
+    //   console.log('FIRST L : ', lima)
+    // }
+    var ll = lima
     let n = tuple.normal
-    let Id = l.dot(n)
+
+    Id = lima.clone().dot(n)*-1
+    // if (DEBUG) {
+    //   console.log('Id : ', Id)
+    // }
+
+    // calc reflection
+    // R = reflection = 2*(tuple.normal dot l)*N - l
+    // (r dot v)^(materialShininess-epsilon)
+
+    // |||||||||||||||||||||||||||
+    let scalar = 2 * n.dot(ll)
+    let rtmp = n.multiplyScalar(2)
+
+    let r = new THREE.Vector3().subVectors(rtmp, ll)
+    let v = ray.direction
+    // |||||||||||||||||||||||||||
+    Is = Math.pow(r.dot(v), (surface.mat.shininess-EPSILON))
+    if (isNaN(Is)){
+      Is = 0;
+
+    }
+    // if (DEBUG) {
+    // //   console.log('N :', n)
+    // //   console.log('R : ', r)
+    // //   console.log('V : ', v)
+    // //   // console.log('L : ', l)
+    // //   console.log('Id : ', Id)
+    // //   console.log('RTMP : ', rtmp)
+    // // console.log(r.dot(v))
+    // console.log('ray direction : ', ray.direction)
+    // console.log('r : ', r)
+    // console.log('v : ', v)
+    // console.log('Ia : ', Ia)
+    // console.log('Id : ', Id)
+    // console.log('Is : ', Is)
+    // console.log('ks array : ', surface.mat.ks)
+    // }
+
   }
 
 
@@ -521,22 +594,38 @@ function trace(ray, surface, lights, tuple){
   // TODO:
   // find Id
   // find Is
-
-  for (var i = 0; i < 2; i++) {
-    color[i] = Ia[i] + surface.mat.ka[i] + (Id*surface.mat.kd[i]) +
+  // if (DEBUG){
+  //   console.log('id value is maintaining at  :', Id)
+  // }
+  for (var i = 0; i < 3; i++) {
+    // color[i] = Ia[i] + surface.mat.ka[i]
+    // if (DEBUG) {
+    //   console.log('PRODUCT : ', surface.mat.ks[i])
+    // }
+    let yog1 = (Ia[i]*surface.mat.ka[i])
+    let yog2 = (Id*surface.mat.kd[i])
+    let yog3 = (Is*surface.mat.ks[i])
+    // if (DEBUG) {
+    //   console.log('y1 : ', yog1)
+    //   console.log('y2 : ', yog2)
+    //   console.log('y3 : ', yog3)
+    // }
+    color[i] = yog1+yog2+yog3
+    // color[i] = (Ia[i]*surface.mat.ka[i]) + (Id*surface.mat.kd[i]) + (Is*surface.mat.ks[i])
 
   }
 
   if (DEBUG){
-    // console.log('color length : ', color.length)
-    console.log('point light : ', pointLight)
-    console.log('direcitonal light : ', directionalLight)
-    console.log('ambient light : ', ambientLight)
-    console.log('surface material : ', surface.mat)
-    console.log('ka : ', surface.mat.ka)
-    console.log('kd : ', surface.mat.kd)
-    console.log('ks : ', surface.mat.ks)
-    console.log('Ia motherFUUFUFUFU : ', Ia)
+  //   // console.log('color length : ', color.length)
+  //   console.log('point light : ', pointLight)
+  //   console.log('direcitonal light : ', directionalLight)
+  //   console.log('ambient light : ', ambientLight)
+  //   console.log('surface material : ', surface.mat)
+  //   console.log('ka : ', surface.mat.ka)
+  //   console.log('kd : ', surface.mat.kd)
+  //   console.log('ks : ', surface.mat.ks)
+  //   console.log('Ia motherFUUFUFUFU : ', Ia)
+    console.log('COLOR : ', color)
   }
 
 
@@ -617,20 +706,32 @@ function trace(ray, surface, lights, tuple){
  * @param {int} y     The y-coordinate of the pixel
  * @param {float[3]} color A length-3 array (or a vec3) representing the color. Color values should floating point values between 0 and 1
  */
-function setPixelRed(x, y, color){
-  var i = (y*imageBuffer.width + x)*4;
-  imageBuffer.data[i] = (color[0]*255) | 255;
-  imageBuffer.data[i+1] = (color[1]*255) | 0;
-  imageBuffer.data[i+2] = (color[2]*255) | 0;
-  imageBuffer.data[i+3] = 255; //(color[3]*255) | 0; //switch to include transparency
-}
-function setPixelBlack(x, y, color){
+function setPixel(x, y, color){
+  // for (var i = 0; i < color.length; i++) {
+  //   color[i] = color[i]/100.0
+  //
+  // }
+  // if (DEBUG){
+  //   console.log('WTF COLOR R: ', color[0]*255)
+  //   console.log('WTF COLOR B: ', color[1]*255)
+  //   console.log('WTF COLOR G: ', color[2]*255)
+  // }
   var i = (y*imageBuffer.width + x)*4;
   imageBuffer.data[i] = (color[0]*255) | 0;
   imageBuffer.data[i+1] = (color[1]*255) | 0;
   imageBuffer.data[i+2] = (color[2]*255) | 0;
+  // imageBuffer.data[i] = (color[0]*255);
+  // imageBuffer.data[i+1] = (color[1]*255);
+  // imageBuffer.data[i+2] = (color[2]*255);
   imageBuffer.data[i+3] = 255; //(color[3]*255) | 0; //switch to include transparency
 }
+// function setPixelBlack(x, y, color){
+//   var i = (y*imageBuffer.width + x)*4;
+//   imageBuffer.data[i] = (color[0]*255) | 0;
+//   imageBuffer.data[i+1] = (color[1]*255) | 0;
+//   imageBuffer.data[i+2] = (color[2]*255) | 0;
+//   imageBuffer.data[i+3] = 255; //(color[3]*255) | 0; //switch to include transparency
+// }
 
 //converts degrees to radians
 function rad(degrees){
