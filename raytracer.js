@@ -21,10 +21,10 @@ function init() {
   imageBuffer = context.createImageData(canvas.width, canvas.height); //buffer for pixels
 
 
-  loadSceneFile("assets/TriangleShadingTest.json");
+  // loadSceneFile("assets/TriangleShadingTest.json");
   // loadSceneFile("assets/TriangleTest.json");
   // loadSceneFile("assets/SphereTest.json");
-  // loadSceneFile("assets/SphereShadingTest1.json");
+  loadSceneFile("assets/SphereShadingTest2.json");
 }
 
 //loads and "parses" the scene file at the given path
@@ -242,7 +242,9 @@ Sphere.prototype.intersects = function(ray){
   // }
 
   // b^2 - 4ac
-
+  if (DEBUG) {
+    console.log('TESTING FIRST RAY DIRECTION : ', ray.direction)
+  }
   // b = d dot (e-c)
   var b = new THREE.Vector3().subVectors(ray.origin, this.center)
   b = ray.direction.dot(b)
@@ -300,17 +302,20 @@ Sphere.prototype.intersects = function(ray){
     let plusT = (-b + (Math.sqrt(finalTerm)))/dDotD
     let minusT = (-b - (Math.sqrt(finalTerm)))/dDotD
 
-    if (DEBUG){
-      console.log('plus term : ', plusT)
-      console.log('minus term : ', minusT)
-    }
+
 
     let intersectionPoint
 
+
+
     if (plusT > minusT){
-      intersectionPoint = ray.direction.multiplyScalar(plusT)
+      intersectionPoint = ray.direction.clone().multiplyScalar(plusT)
     } else {
-      intersectionPoint = ray.direction.multiplyScalar(minusT)
+      intersectionPoint = ray.direction.clone().multiplyScalar(minusT)
+    }
+
+    if (DEBUG) {
+      console.log('TESTING second RAY DIRECTION : ', ray.direction)
     }
 
 
@@ -321,7 +326,13 @@ Sphere.prototype.intersects = function(ray){
     // how can I calcualte the point vector?
 
     let normal = new THREE.Vector3().subVectors(ray.direction, this.center)
-
+    normal.normalize()
+    if (DEBUG){
+      console.log('plus term : ', plusT)
+      console.log('minus term : ', minusT)
+      console.log('TESTING intersection point : ', intersectionPoint)
+      console.log('TESTING surface normal : ', normal)
+    }
     // if (DEBUG){
     //   console.log('normal : ', normal)
     //   console.log('intersection point, so called : ', intersectionPoint)
@@ -433,7 +444,11 @@ Triangle.prototype.intersects = function(ray){
     let tauDet = tau.clone().determinant()
 
     let finalT = tauDet / alphaDet
-
+    // from mullen, to find surface normal
+    // take 3 points
+    // tmp1 = p1 - p2
+    // tmp2 = p3 - p2
+    // crossVectors (tmp1, tmp2)
     let normal = new THREE.Vector3().crossVectors(a, b)
 
     if (DEBUG){
@@ -516,9 +531,12 @@ function trace(ray, surface, lights, tuple){
     the normal vector at point p is given by the gradient n = 2(p-c)
 
   */
+  // let pointLightPosition
+  // if (pointLight) {
+  //   pointLightPosition = new THREE.Vector3(pointLight.position[0], pointLight.position[1], pointLight.position[2])
+  // }
 
-  let pointLightPosition = new THREE.Vector3(pointLight.position[0], pointLight.position[1], pointLight.position[2])
-
+  let direction
 
   // color array to hold rgb values, index: 0, 1, 2 | R, G, B
   let color = []
@@ -532,7 +550,8 @@ function trace(ray, surface, lights, tuple){
   let Id = 0;
   let Is = 0;
 
-  if(pointLight){
+  if (pointLight || directionalLight){
+    let pointLightPosition = new THREE.Vector3(pointLight.position[0], pointLight.position[1], pointLight.position[2])
     // if (DEBUG) {
     //   console.log('first Id : ', Id)
     // }
@@ -549,11 +568,11 @@ function trace(ray, surface, lights, tuple){
     let n = tuple.normal
 
     Id = lima.clone().normalize().dot(n.clone().normalize())*-1
-    if (DEBUG) {
-      console.log('TESTING Id : ', Id)
-      console.log('TESTING normal : ', n.clone().normalize())
-      console.log('TESTING tuple intersection point : ', tuple.ip)
-    }
+    // if (DEBUG) {
+    //   console.log('TESTING Id : ', Id)
+    //   console.log('TESTING normal : ', n.clone().normalize())
+    //   console.log('TESTING tuple intersection point : ', tuple.ip)
+    // }
 
     // calc reflection
     // R = reflection = 2*(tuple.normal dot l)*N - l
@@ -564,14 +583,40 @@ function trace(ray, surface, lights, tuple){
     let rtmp = n.multiplyScalar(2)
 
     let r = new THREE.Vector3().subVectors(rtmp, ll)
+    if (DEBUG) {
+      console.log('IMPORTANT r variable : ', r)
+    }
+    r.normalize();
+    // r.negate()
     let v = ray.direction
     // |||||||||||||||||||||||||||
-    Is = Math.pow(r.dot(v), (surface.mat.shininess-EPSILON))
+    // Is = r.clone().dot(v)
+    if (DEBUG) {
+      console.log('FIRST IS : ', Is)
+    }
+    Is = Math.pow(r.clone().dot(v), (surface.mat.shininess-EPSILON))
+    // Is = Math.pow(Is, (surface.mat.shininess-EPSILON))
+    // Is = Math.pow(Is, 1)
+    // Is = r.dot(v)
+    if (DEBUG) {
+      console.log('SECOND IS : ', Is)
+      console.log('surface mat shininess : ', surface.mat)
+      console.log('epsilon : ', EPSILON)
+    }
     if (isNaN(Is)){
       Is = 0;
 
+    } else if (Is < 0) {
+      // Is *= -1
     }
-
+    if (DEBUG) {
+      console.log('ID : ', Id)
+      console.log('IS : ', Is)
+      console.log('IA : ', Ia)
+      console.log('TESTING ray direction FINAL : ', ray.direction)
+      console.log('testing r variable : ', r)
+      console.log('testing v variable : ', v)
+    }
   }
 
 
@@ -591,11 +636,11 @@ function trace(ray, surface, lights, tuple){
     let yog1 = (Ia[i]*surface.mat.ka[i])
     let yog2 = (Id*surface.mat.kd[i])
     let yog3 = (Is*surface.mat.ks[i])
-    // if (DEBUG) {
-    //   console.log('y1 : ', yog1)
-    //   console.log('y2 : ', yog2)
-    //   console.log('y3 : ', yog3)
-    // }
+    if (DEBUG) {
+      console.log('y1 : ', yog1)
+      console.log('y2 : ', yog2)
+      console.log('y3 : ', yog3)
+    }
     color[i] = yog1+yog2+yog3
     // color[i] = (Ia[i]*surface.mat.ka[i]) + (Id*surface.mat.kd[i]) + (Is*surface.mat.ks[i])
 
