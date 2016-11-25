@@ -277,13 +277,13 @@ Sphere.prototype.intersects = function(ray){
   // }
 
   // (e - c) dot (e - c) - radius^2
-  var bigFuckingTerm = eSubCdot - (this.radius*this.radius)
+  var bft = eSubCdot - (this.radius*this.radius)
   if (DEBUG){
     // console.log('ray radius : ', ray.radius)
-    // console.log('big right term : ', bigFuckingTerm)
+    // console.log('big right term : ', bft)
   }
 
-  var rightTerm = dDotD*bigFuckingTerm
+  var rightTerm = dDotD*bft
 
 
   // if (DEBUG){
@@ -519,13 +519,6 @@ function trace(ray, surface, lights, tuple){
   XXX
   XXX
   XXX
-  XXX
-  questions for professor mullen :
-
-  what is the variable Ii?
-  how to calculate Ia
-  how do i calculate surface normals?
-    is the calculation separate for triangles and spheres?
 
   bottom of section 4.4.1
     the normal vector at point p is given by the gradient n = 2(p-c)
@@ -542,7 +535,7 @@ function trace(ray, surface, lights, tuple){
   let color = []
 
   let Ia = ambientLight.color
-//  reflection vector
+  //  reflection vector
   // let r =
   let v = new THREE.Vector3().subVectors(tuple.ip, ray.origin)
   // let Is = ()
@@ -552,27 +545,17 @@ function trace(ray, surface, lights, tuple){
 
   if (pointLight || directionalLight){
     let pointLightPosition = new THREE.Vector3(pointLight.position[0], pointLight.position[1], pointLight.position[2])
-    // if (DEBUG) {
-    //   console.log('first Id : ', Id)
-    // }
 
     /*
     the vector l is computed by subtracting the intersection point of the ray and
     the surface from the light source position
     */
     let lima = new THREE.Vector3().subVectors(pointLightPosition, tuple.ip)
-    // let lima = new THREE.Vector3().subVectors(pointLight.position, tuple.ip)
-    // l.subVectors(pointLight.position, tuple.ip)
 
     var ll = lima
     let n = tuple.normal
 
     Id = lima.clone().normalize().dot(n.clone().normalize())*-1
-    // if (DEBUG) {
-    //   console.log('TESTING Id : ', Id)
-    //   console.log('TESTING normal : ', n.clone().normalize())
-    //   console.log('TESTING tuple intersection point : ', tuple.ip)
-    // }
 
     // calc reflection
     // R = reflection = 2*(tuple.normal dot l)*N - l
@@ -658,16 +641,6 @@ function trace(ray, surface, lights, tuple){
   //   console.log('Ia motherFUUFUFUFU : ', Ia)
     console.log('COLOR : ', color)
   }
-
-
-
-  // if (DEBUG){
-  //   console.log('tuple intersection point : ', tuple.ip)
-  //   console.log('tuple normal : ', tuple.normal)
-  // }
-
-
-
 
 
   return color
